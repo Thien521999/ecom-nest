@@ -1,6 +1,7 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common'
+import { Body, Controller, Post } from '@nestjs/common'
 import { ZodSerializerDto } from 'nestjs-zod'
-import { RegisterBodyDTO, RegisterResDTO } from './auth.dto'
+import { RegisterResDTO } from './auth.dto'
+import { RegisterBodyType } from './auth.model'
 import { AuthService } from './auth.service'
 
 @Controller('auth')
@@ -9,23 +10,23 @@ export class AuthController {
 
   @Post('register')
   @ZodSerializerDto(RegisterResDTO)
-  async register(@Body() body: RegisterBodyDTO) {
+  async register(@Body() body: RegisterBodyType) {
     return await this.authService.register(body)
   }
 
-  @Post('login')
-  async login(@Body() body: any) {
-    return await this.authService.login(body)
-  }
+  // @Post('login')
+  // async login(@Body() body: any) {
+  //   return await this.authService.login(body)
+  // }
 
-  @Post('refresh-token')
-  @HttpCode(HttpStatus.OK) // để trả về status code 200
-  async RefreshToken(@Body() body: any) {
-    return await this.authService.refreshToken(body.refreshToken)
-  }
+  // @Post('refresh-token')
+  // @HttpCode(HttpStatus.OK) // để trả về status code 200
+  // async RefreshToken(@Body() body: any) {
+  //   return await this.authService.refreshToken(body.refreshToken)
+  // }
 
-  @Post('logout')
-  async logout(@Body() body: any) {
-    return await this.authService.logout(body.refreshToken)
-  }
+  // @Post('logout')
+  // async logout(@Body() body: any) {
+  //   return await this.authService.logout(body.refreshToken)
+  // }
 }
