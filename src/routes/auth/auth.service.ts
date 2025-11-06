@@ -4,6 +4,7 @@ import { HashingService } from 'src/shared/services/hashing.service'
 import { PrismaService } from 'src/shared/services/prisma.service'
 import { TokenService } from 'src/shared/services/token.service'
 import { RolesService } from './roles.service'
+import { RegisterBodyDTO } from './auth.dto'
 
 @Injectable()
 export class AuthService {
@@ -14,7 +15,7 @@ export class AuthService {
     private readonly rolesService: RolesService,
   ) {}
 
-  async register(body: any) {
+  async register(body: RegisterBodyDTO) {
     try {
       const clientRoleId = await this.rolesService.getClientRoleId()
       const hashedPassword = await this.hashingService.hash(body.password)
@@ -38,7 +39,7 @@ export class AuthService {
       console.log(error)
 
       if (isUniqueConstraintPrismaError(error)) {
-        throw new ConflictException('Email đã tồn tại')
+        throw new ConflictException('Email already exists')
       }
 
       throw error
