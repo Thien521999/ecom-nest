@@ -20,3 +20,8 @@ export const UserStatus = {
   INACTIVE: 'INACTIVE',
   BLOCKED: 'BLOCKED',
 } as const
+
+export const TypeOfVerificationCode = {
+  REGISTER: 'REGISTER',
+  VERIFICATION_CODE: 'VERIFICATION_CODE',
+}
