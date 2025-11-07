@@ -2,14 +2,15 @@ import { Injectable, UnprocessableEntityException } from '@nestjs/common'
 import { addMilliseconds } from 'date-fns'
 import ms, { StringValue } from 'ms'
 import envConfig from 'src/shared/config'
+import { TypeOfVerificationCode } from 'src/shared/constants/auth.constant'
 import { generateOTP, isUniqueConstraintPrismaError } from 'src/shared/helpers'
 import { SharedUserRepository } from 'src/shared/repositories/shared.user.repo'
+import { EmailService } from 'src/shared/services/email.service'
 import { HashingService } from 'src/shared/services/hashing.service'
 import { TokenService } from 'src/shared/services/token.service'
 import { RegisterBodyType, SendOTPBodyType } from './auth.model'
 import { AuthRepository } from './auth.repo'
 import { RolesService } from './roles.service'
-import { TypeOfVerificationCode } from 'src/shared/constants/auth.constant'
 
 @Injectable()
 export class AuthService {
@@ -19,6 +20,7 @@ export class AuthService {
     private readonly rolesService: RolesService,
     private readonly authRepository: AuthRepository,
     private readonly sharedUserRepository: SharedUserRepository,
+    private readonly emailService: EmailService,
   ) {}
 
   async register(body: RegisterBodyType) {
@@ -87,8 +89,8 @@ export class AuthService {
         },
       ])
     }
-    // 2. Tao OTP
 
+    // 2. Tao OTP
     const code = generateOTP()
     const verificationCode = this.authRepository.createVerificationCode({
       email: body.email,
@@ -96,6 +98,21 @@ export class AuthService {
       type: body.type,
       expiresAt: addMilliseconds(new Date(), ms(envConfig.OTP_EXPIRES_IN as StringValue)),
     })
+
+    // 3. Gửi mã OTP
+    const { error } = await this.emailService.sendEmail({
+      email: body.email,
+      code,
+    })
+
+    if (error) {
+      throw new UnprocessableEntityException([
+        {
+          message: 'Gửi OTP thất bại',
+          path: 'code',
+        },
+      ])
+    }
 
     return verificationCode
   }
