@@ -1,10 +1,15 @@
-import { ConflictException, Injectable } from '@nestjs/common'
-import { isUniqueConstraintPrismaError } from 'src/shared/helpers'
+import { Injectable, UnprocessableEntityException } from '@nestjs/common'
+import { addMilliseconds } from 'date-fns'
+import ms, { StringValue } from 'ms'
+import envConfig from 'src/shared/config'
+import { generateOTP, isUniqueConstraintPrismaError } from 'src/shared/helpers'
+import { SharedUserRepository } from 'src/shared/repositories/shared.user.repo'
 import { HashingService } from 'src/shared/services/hashing.service'
 import { TokenService } from 'src/shared/services/token.service'
 import { RegisterBodyType, SendOTPBodyType } from './auth.model'
 import { AuthRepository } from './auth.repo'
 import { RolesService } from './roles.service'
+import { TypeOfVerificationCode } from 'src/shared/constants/auth.constant'
 
 @Injectable()
 export class AuthService {
@@ -13,10 +18,35 @@ export class AuthService {
     private readonly tokenService: TokenService,
     private readonly rolesService: RolesService,
     private readonly authRepository: AuthRepository,
+    private readonly sharedUserRepository: SharedUserRepository,
   ) {}
 
   async register(body: RegisterBodyType) {
     try {
+      const verificationCode = await this.authRepository.findUniqueVerificationCode({
+        email: body.email,
+        code: body.code,
+        type: TypeOfVerificationCode.REGISTER,
+      })
+
+      if (!verificationCode) {
+        throw new UnprocessableEntityException([
+          {
+            message: 'Mã OTP ko hợp lệ',
+            path: 'code',
+          },
+        ])
+      }
+
+      if (verificationCode.expiresAt < new Date()) {
+        throw new UnprocessableEntityException([
+          {
+            message: 'Mã OTP đã hết hạn',
+            path: 'code',
+          },
+        ])
+      }
+
       const clientRoleId = await this.rolesService.getClientRoleId()
       const hashedPassword = await this.hashingService.hash(body.password)
 
@@ -31,19 +61,43 @@ export class AuthService {
       console.log(error)
 
       if (isUniqueConstraintPrismaError(error)) {
-        throw new ConflictException('Email already exists')
+        throw new UnprocessableEntityException([
+          {
+            message: 'Email already exists',
+            path: 'email',
+          },
+        ])
       }
 
       throw error
     }
   }
 
-  sendOTP(body: SendOTPBodyType) {
-    // try {
-    return body
-    // } catch (error) {
-    //   console.log(error)
-    // }
+  async sendOTP(body: SendOTPBodyType) {
+    // 1. Kiểm tra email da ton tai trong db chua
+    const user = await this.sharedUserRepository.findUnique({
+      email: body.email,
+    })
+
+    if (user) {
+      throw new UnprocessableEntityException([
+        {
+          message: 'Email already exists',
+          path: 'email',
+        },
+      ])
+    }
+    // 2. Tao OTP
+
+    const code = generateOTP()
+    const verificationCode = this.authRepository.createVerificationCode({
+      email: body.email,
+      code,
+      type: body.type,
+      expiresAt: addMilliseconds(new Date(), ms(envConfig.OTP_EXPIRES_IN as StringValue)),
+    })
+
+    return verificationCode
   }
 
   // async login(body: any) {

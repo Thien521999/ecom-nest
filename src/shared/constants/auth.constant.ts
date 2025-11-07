@@ -23,5 +23,10 @@ export const UserStatus = {
 
 export const TypeOfVerificationCode = {
   REGISTER: 'REGISTER',
-  VERIFICATION_CODE: 'VERIFICATION_CODE',
-}
+  FORGOT_PASSWORD: 'FORGOT_PASSWORD',
+  LOGIN: 'LOGIN',
+  DISABLE_2FA: 'DISABLE_2FA',
+} as const
+
+// dòng này có nghĩa là type TypeOfVerificationCodeType = "REGISTER" | "FORGOT_PASSWORD" | "LOGIN" | "DISABLE_2FA"
+export type TypeOfVerificationCodeType = (typeof TypeOfVerificationCode)[keyof typeof TypeOfVerificationCode]

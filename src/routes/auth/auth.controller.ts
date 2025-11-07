@@ -14,8 +14,8 @@ export class AuthController {
   }
 
   @Post('otp')
-  sendOTP(@Body() body: SendOTPBodyDTO) {
-    return this.authService.sendOTP(body)
+  async sendOTP(@Body() body: SendOTPBodyDTO) {
+    return await this.authService.sendOTP(body)
   }
 
   // @Post('login')
