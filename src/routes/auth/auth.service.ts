@@ -106,6 +106,7 @@ export class AuthService {
     })
 
     if (error) {
+      console.log(error)
       throw new UnprocessableEntityException([
         {
           message: 'Gửi OTP thất bại',

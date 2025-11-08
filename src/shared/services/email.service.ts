@@ -11,8 +11,8 @@ export class EmailService {
 
   sendEmail(payload: { email: string; code: string }) {
     return this.resend.emails.send({
-      from: 'Ecommerce <onboarding@resend.dev>',
-      to: ['trhoangthien1999@gmail.com'],
+      from: 'Ecommerce <no-reply@tranhoangthien.id.vn>',
+      to: [payload.email],
       subject: 'Mã OTP',
       html: `<strong>${payload.code}</strong>`,
     })
