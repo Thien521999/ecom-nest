@@ -32,6 +32,8 @@ export const RegisterResSchema = UserSchema.omit({
 
 export type RegisterResType = z.infer<typeof RegisterResSchema>
 
+// ---------------------------------------------------------------
+
 export const VerificationCodeSchema = z.object({
   id: z.number(),
   email: z.string().email(),
@@ -54,3 +56,59 @@ export const SendOTPBodySchema = VerificationCodeSchema.pick({
 })
 
 export type SendOTPBodyType = z.infer<typeof SendOTPBodySchema>
+
+// ---------------------------------------------------------------
+
+export const LoginBodySchema = UserSchema.pick({
+  email: true,
+  password: true,
+})
+
+export type LoginBodyType = z.infer<typeof LoginBodySchema>
+
+export const LoginResSchema = z.object({
+  accessToken: z.string(),
+  refreshToken: z.string(),
+})
+
+export type LoginResType = z.infer<typeof LoginResSchema>
+
+// ---------------------------------------------------------------
+
+export const RefreshTokenBodySchema = z
+  .object({
+    refreshToken: z.string(),
+  })
+  .strict()
+
+export type RefreshTokenBodyType = z.infer<typeof RefreshTokenBodySchema>
+
+export const RefreshTokenResSchema = LoginResSchema
+
+export type RefreshTokenResType = LoginResType
+
+export const DeviceSchema = z.object({
+  id: z.number(),
+  userId: z.number(),
+  userAgent: z.string(),
+  ip: z.string(),
+  lastActive: z.string(),
+  createdAt: z.string(),
+  isActive: z.boolean(),
+})
+
+export type DeviceBodyType = z.infer<typeof DeviceSchema>
+
+export const RoleSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  description: z.string(),
+  isActive: z.boolean(),
+  createdById: z.number().nullable(),
+  updatedById: z.number().nullable(),
+  deletedById: z.number().nullable(),
+  deletedAt: z.date().nullable(),
+  createdAt: z.date(),
+})
+
+export type RoleType = z.infer<typeof RoleSchema>
