@@ -7,7 +7,6 @@ export class SharedUserRepository {
   constructor(private readonly prismaService: PrismaService) {}
 
   async findUnique(uniqueObject: { email: string } | { id: number }): Promise<UserType | null> {
-    console.log({ uniqueObject })
     return await this.prismaService.user.findUnique({
       where: uniqueObject,
     })

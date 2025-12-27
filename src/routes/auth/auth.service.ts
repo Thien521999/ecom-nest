@@ -8,7 +8,8 @@ import { SharedUserRepository } from 'src/shared/repositories/shared.user.repo'
 import { EmailService } from 'src/shared/services/email.service'
 import { HashingService } from 'src/shared/services/hashing.service'
 import { TokenService } from 'src/shared/services/token.service'
-import { RegisterBodyType, SendOTPBodyType } from './auth.model'
+import { AccessTokenPayloadCreate } from 'src/shared/types/jwt.type'
+import { LoginBodyType, RegisterBodyType, SendOTPBodyType } from './auth.model'
 import { AuthRepository } from './auth.repo'
 import { RolesService } from './roles.service'
 
@@ -118,59 +119,76 @@ export class AuthService {
     return verificationCode
   }
 
-  // async login(body: any) {
-  //   // Tìm email có khớp ko
-  //   const user = await this.prismaService.user.findUnique({
-  //     where: {
-  //       email: body.email,
-  //       id: body.id,
-  //     },
-  //   })
+  async login(body: LoginBodyType & { userAgent: string; ip: string }) {
+    // Tìm email có khớp ko
+    const user = await this.authRepository.findUniqueUserIncludeRole({
+      email: body.email,
+    })
 
-  //   if (!user) {
-  //     throw new UnauthorizedException('Acount is not exist')
-  //   }
+    if (!user) {
+      throw new UnprocessableEntityException({
+        message: 'Email không tồn tại',
+        path: 'email',
+      })
+    }
 
-  //   // Kiểm tra password có khớp ko
-  //   const isPasswordMatch = await this.hashingService.compare(body.password, user.password)
+    // Kiểm tra password có khớp ko
+    const isPasswordMatch = await this.hashingService.compare(body.password, user.password)
 
-  //   if (!isPasswordMatch) {
-  //     throw new UnprocessableEntityException({
-  //       field: 'password',
-  //       error: 'Password is correct',
-  //     })
-  //   }
+    if (!isPasswordMatch) {
+      throw new UnprocessableEntityException([
+        {
+          message: 'Password is correct',
+          path: 'password',
+        },
+      ])
+    }
 
-  //   const tokens = await this.generateTokens({ userId: user.id })
+    // Tạo record device mới
+    const device = await this.authRepository.createDevice({
+      userId: user.id,
+      userAgent: body.userAgent,
+      ip: body.ip,
+    })
 
-  //   return tokens
-  // }
+    const tokens = await this.generateTokens({
+      userId: user.id,
+      deviceId: device.id,
+      roleId: user.roleId,
+      roleName: user.role.name,
+    })
 
-  // async generateTokens(payload: { userId: number }) {
-  //   // const [accessToken, refreshToken] = await Promise.all([
-  //   //   this.tokenService.signAccessToken(payload),
-  //   //   this.tokenService.signRereshToken(payload),
-  //   // ])
-  //   const accessToken = this.tokenService.signAccessToken(payload)
-  //   const refreshToken = this.tokenService.signRereshToken(payload)
+    return tokens
+  }
 
-  //   const decodedRefreshToken = await this.tokenService.verifyRefreshToken(refreshToken)
+  async generateTokens({ userId, deviceId, roleId, roleName }: AccessTokenPayloadCreate) {
+    // const [accessToken, refreshToken] = await Promise.all([
+    //   this.tokenService.signAccessToken(payload),
+    //   this.tokenService.signRereshToken(payload),
+    // ])
+    const accessToken = this.tokenService.signAccessToken({
+      userId,
+      deviceId,
+      roleId,
+      roleName,
+    })
+    const refreshToken = this.tokenService.signRereshToken({ userId })
+    const decodedRefreshToken = await this.tokenService.verifyRefreshToken(refreshToken)
 
-  //   // save refreshToken vào Db
-  //   await this.prismaService.refreshToken.create({
-  //     data: {
-  //       token: refreshToken,
-  //       userId: payload.userId,
-  //       expiresAt: new Date(decodedRefreshToken.exp * 1000),
-  //       deviceId: 1,
-  //     },
-  //   })
+    // save refreshToken vào Db
 
-  //   return {
-  //     accessToken,
-  //     refreshToken,
-  //   }
-  // }
+    await this.authRepository.createRefreshToken({
+      token: refreshToken,
+      userId,
+      expiresAt: new Date(decodedRefreshToken.exp * 1000),
+      deviceId: 1,
+    })
+
+    return {
+      accessToken,
+      refreshToken,
+    }
+  }
 
   // async refreshToken(refreshToken: string) {
   //   try {
